@@ -1,11 +1,15 @@
 package com.fayfal.amazon.as.json;
 
 import com.fayfal.amazon.as.type.AmazonItem;
+import net.sf.json.JSONArray;
+import net.sf.json.JSONObject;
+import org.apache.commons.io.IOUtils;
 import org.springframework.stereotype.Component;
 
-import javax.json.*;
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.io.InputStream;
+import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -17,39 +21,46 @@ public class AmazonPriceResponseParser
 {
     public List<AmazonItem> parse(String input)
     {
-        ByteArrayInputStream inputStream = new ByteArrayInputStream(input.getBytes());
-
-        return parse(inputStream);
+        return doParse(JSONObject.fromObject(input));
     }
 
     public List<AmazonItem> parse(InputStream inputStream)
     {
-        return doParse(Json.createReader(inputStream).readObject());
+        StringWriter writer = new StringWriter();
+        try
+        {
+            IOUtils.copy(inputStream, writer);
+        }
+        catch (IOException e)
+        {
+            e.printStackTrace();
+        }
+        return parse(writer.toString());
     }
 
-    protected List<AmazonItem> doParse(JsonObject root)
+    protected List<AmazonItem> doParse(JSONObject root)
     {
         List<AmazonItem> result = new ArrayList<>();
 
-        JsonObject dealDetails = root.getJsonObject("dealDetails");
+        JSONObject dealDetails = root.getJSONObject("dealDetails");
         if (dealDetails != null)
         {
-            for (String dealDetailKey : dealDetails.keySet())
+            for (Object dealDetailKey : dealDetails.keySet())
             {
-                JsonObject dealDetail = dealDetails.get(dealDetailKey).asJsonObject();
+                JSONObject dealDetail = (JSONObject) dealDetails.get(dealDetailKey);
 
                 String title = dealDetail.getString("title");
                 String url = dealDetail.getString("egressUrl");
 
-                JsonArray items = dealDetail.getJsonArray("items");
+                JSONArray items = dealDetail.getJSONArray("items");
                 if (items != null && items.size() != 0)
                 {
                     for (int i = 0; i < items.size(); i++)
                     {
-                        JsonObject item = items.getJsonObject(i);
-                        double dealPrice = item.getJsonNumber("dealPrice").doubleValue();
-                        JsonValue variationDimensions = item.get("variationDimensions");
-                        String sku = variationDimensions == null ? "" : variationDimensions.toString();
+                        JSONObject item = items.getJSONObject(i);
+                        double dealPrice = item.getDouble("dealPrice");
+                        String variationDimensions = item.getString("variationDimensions");
+                        String sku = variationDimensions == null ? "" : variationDimensions;
                         sku = "null".equals(sku) ? "{}": sku;
 
                         AmazonItem amazonItem = new AmazonItem();

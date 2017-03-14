@@ -25,6 +25,5 @@ public class AmazonPriceResponseParserTest extends TestCase
         AmazonPriceResponseParser parser = new AmazonPriceResponseParser();
         List<AmazonItem> result = parser.parse(input);
         assertNotNull(result);
-
     }
 }
